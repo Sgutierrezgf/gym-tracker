@@ -18,7 +18,7 @@ export const createExercise = async (req, res) => {
         return res.status(400).json({ message: 'Title is required' });
     }
     try {
-        const newExercise = new Exercise({ title: req.body.title, reps: req.body.reps, weight: req.body.weight });
+        const newExercise = new Exercise({ title: req.body.title, reps: req.body.reps, weight: req.body.weight, date: req.body.type });
         const exercisesSaved = await newExercise.save();
         res.json(exercisesSaved);
     } catch (error) {

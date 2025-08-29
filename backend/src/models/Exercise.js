@@ -4,7 +4,8 @@ import mongoosePaginate from "mongoose-paginate-v2"
 const exerciseSchema = new Schema({
     title: String,
     reps: Number,
-    weight: Number
+    weight: Number,
+    type: String
 }, {
     versionKey: false,
     timestamps: true
