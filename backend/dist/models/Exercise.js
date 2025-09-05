@@ -8,6 +8,7 @@ var _mongoose = require("mongoose");
 var _mongoosePaginateV = _interopRequireDefault(require("mongoose-paginate-v2"));
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
 var exerciseSchema = new _mongoose.Schema({
+  type: String,
   title: String,
   reps: Number,
   weight: Number

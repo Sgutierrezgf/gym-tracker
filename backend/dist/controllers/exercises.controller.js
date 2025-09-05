@@ -61,6 +61,7 @@ var createExercise = exports.createExercise = /*#__PURE__*/function () {
         case 1:
           _context2.p = 1;
           newExercise = new _Exercise["default"]({
+            type: req.body.type,
             title: req.body.title,
             reps: req.body.reps,
             weight: req.body.weight
