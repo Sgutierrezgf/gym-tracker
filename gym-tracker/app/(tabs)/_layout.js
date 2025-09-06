@@ -5,26 +5,32 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 export default function TabsLayout() {
     return (
-        <Tabs screenOptions={{ tabBarActiveTintColor: 'blue' }}>
+        <Tabs screenOptions={{ tabBarActiveTintColor: "blue" }}>
             <Tabs.Screen
                 name="tracker"
                 options={{
-                    title: 'Tracker',
-                    tabBarIcon: ({ color }) => <FontAwesome5 size={28} name="weight" color={color} />,
+                    title: "Tracker",
+                    tabBarIcon: ({ color }) => (
+                        <FontAwesome5 size={28} name="weight" color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen
                 name="history"
                 options={{
-                    title: 'History',
-                    tabBarIcon: ({ color }) => <FontAwesome5 size={28} name="history" color={color} />,
+                    title: "History",
+                    tabBarIcon: ({ color }) => (
+                        <FontAwesome5 size={28} name="history" color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen
                 name="about"
                 options={{
-                    title: 'About',
-                    tabBarIcon: ({ color }) => <FontAwesome5 size={28} name="info" color={color} />,
+                    title: "About",
+                    tabBarIcon: ({ color }) => (
+                        <FontAwesome5 size={28} name="info" color={color} />
+                    ),
                 }}
             />
         </Tabs>
