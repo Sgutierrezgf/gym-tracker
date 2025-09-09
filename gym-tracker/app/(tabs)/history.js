@@ -1,15 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, Dimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState, useMemo } from "react";
 import { useExercises } from "../../context/ExerciseContext";
-import { LineChart } from "react-native-chart-kit";
+import { LineChart, BarChart } from "react-native-chart-kit";
 
 export default function History() {
     const { data, isLoading, error, getExerciseData } = useExercises();
     const [filterType, setFilterType] = useState("");
     const [filterName, setFilterName] = useState("");
-    const [metric, setMetric] = useState("weight"); // "weight" | "reps"
+    const [metric, setMetric] = useState("weight");
 
     useFocusEffect(
         useCallback(() => {
@@ -17,26 +17,34 @@ export default function History() {
         }, [getExerciseData])
     );
 
-    // ✅ aplicar filtros
+
+    const exercisesByType = useMemo(() => {
+        if (!filterType) return [];
+        return [
+            ...new Set(
+                data
+                    ?.filter((item) => item.type.toLowerCase() === filterType.toLowerCase())
+                    .map((item) => item.title)
+            ),
+        ];
+    }, [data, filterType]);
+
+
     const filteredData = useMemo(() => {
+        if (!filterType || !filterName) return [];
         return data
-            ?.filter((item) => item && item.title)
-            .filter((item) =>
-                filterType ? item.type.toLowerCase() === filterType.toLowerCase() : true
+            ?.filter(
+                (item) =>
+                    item.type.toLowerCase() === filterType.toLowerCase() &&
+                    item.title.toLowerCase() === filterName.toLowerCase()
             )
-            .filter((item) =>
-                filterName
-                    ? item.title.toLowerCase().includes(filterName.toLowerCase())
-                    : true
-            )
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // más antiguos primero
-            .slice(-4); // ✅ últimos 4
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }, [data, filterType, filterName]);
 
     if (isLoading) return <Text>Cargando...</Text>;
     if (error) return <Text>Error: {error}</Text>;
 
-    // 📊 datos para la gráfica
+
     const labels = filteredData.map((item) =>
         new Date(item.createdAt).toLocaleDateString()
     );
@@ -44,83 +52,139 @@ export default function History() {
         metric === "weight" ? item.weight : item.reps
     );
 
+
+    const groupedByDate = filteredData.reduce((acc, item) => {
+        const date = new Date(item.createdAt).toLocaleDateString();
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(item);
+        return acc;
+    }, {});
+    const volumeByDate = Object.keys(groupedByDate).map((date) =>
+        groupedByDate[date].reduce((sum, ex) => sum + ex.weight * ex.reps, 0)
+    );
+
     return (
         <ScrollView style={styles.container}>
             <Text style={styles.title}>Historial</Text>
 
-            {/* Filtros */}
-            <View style={styles.filters}>
+
+            <Picker
+                selectedValue={filterType}
+                onValueChange={(val) => {
+                    setFilterType(val);
+                    setFilterName("");
+                }}
+                style={styles.picker}
+            >
+                <Picker.Item label="Selecciona un grupo muscular" value="" />
+                <Picker.Item label="Pecho" value="pecho" />
+                <Picker.Item label="Espalda" value="espalda" />
+                <Picker.Item label="Piernas" value="piernas" />
+                <Picker.Item label="Hombros" value="hombros" />
+            </Picker>
+
+
+            {filterType !== "" && (
                 <Picker
-                    selectedValue={filterType}
-                    onValueChange={(val) => setFilterType(val)}
+                    selectedValue={filterName}
+                    onValueChange={(val) => setFilterName(val)}
                     style={styles.picker}
                 >
-                    <Picker.Item label="Todos los tipos" value="" />
-                    <Picker.Item label="Pecho" value="pecho" />
-                    <Picker.Item label="Espalda" value="espalda" />
-                    <Picker.Item label="Piernas" value="piernas" />
-                    <Picker.Item label="Hombros" value="hombros" />
+                    <Picker.Item label="Selecciona un ejercicio" value="" />
+                    {exercisesByType.map((name) => (
+                        <Picker.Item key={name} label={name} value={name.toLowerCase()} />
+                    ))}
                 </Picker>
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Filtrar por nombre..."
-                    value={filterName}
-                    onChangeText={setFilterName}
-                />
-            </View>
-
-            {/* Lista de últimos 4 ejercicios */}
-            {filteredData.length === 0 ? (
-                <Text>No hay ejercicios con esos filtros</Text>
-            ) : (
-                filteredData.map((item, index) => (
-                    <View key={item._id} style={styles.card}>
-                        <Text style={styles.bold}>
-                            {index + 1}. {item.title}
-                        </Text>
-                        <Text>Grupo: {item.type}</Text>
-                        <Text>Peso: {item.weight} kg</Text>
-                        <Text>Reps: {item.reps}</Text>
-                        <Text>
-                            Fecha: {new Date(item.createdAt).toLocaleDateString()}
-                        </Text>
-                    </View>
-                ))
             )}
 
-            {/* 📊 Gráfica de progreso */}
-            {filteredData.length > 0 && (
-                <View style={{ marginTop: 20 }}>
-                    <Text style={styles.subtitle}>Comparativa de progreso</Text>
 
-                    <Picker
-                        selectedValue={metric}
-                        onValueChange={(val) => setMetric(val)}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Peso (kg)" value="weight" />
-                        <Picker.Item label="Repeticiones" value="reps" />
-                    </Picker>
+            {filterType && filterName && (
+                <>
+                    {filteredData.length === 0 ? (
+                        <Text>No hay registros de este ejercicio</Text>
+                    ) : (
+                        <>
 
-                    <LineChart
-                        data={{
-                            labels,
-                            datasets: [{ data: values }],
-                        }}
-                        width={Dimensions.get("window").width - 40}
-                        height={220}
-                        chartConfig={{
-                            backgroundGradientFrom: "#f9fafb",
-                            backgroundGradientTo: "#f9fafb",
-                            decimalPlaces: 0,
-                            color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                            labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                        }}
-                        bezier
-                        style={styles.chart}
-                    />
-                </View>
+                            {filteredData.map((item, index) => (
+                                <View key={item._id} style={styles.card}>
+                                    <Text style={styles.bold}>
+                                        {index + 1}. {item.title}
+                                    </Text>
+                                    <Text>Grupo: {item.type}</Text>
+                                    <Text>Peso: {item.weight} kg</Text>
+                                    <Text>Reps: {item.reps}</Text>
+                                    <Text>
+                                        Fecha:{" "}
+                                        {new Date(item.createdAt).toLocaleDateString()}
+                                    </Text>
+                                </View>
+                            ))}
+
+
+                            <View style={{ marginTop: 20 }}>
+                                <Text style={styles.subtitle}>
+                                    Comparativa de progreso
+                                </Text>
+
+                                <Picker
+                                    selectedValue={metric}
+                                    onValueChange={(val) => setMetric(val)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Peso (kg)" value="weight" />
+                                    <Picker.Item label="Repeticiones" value="reps" />
+                                </Picker>
+
+                                <LineChart
+                                    data={{
+                                        labels,
+                                        datasets: [{ data: values }],
+                                    }}
+                                    width={Dimensions.get("window").width - 40}
+                                    height={220}
+                                    chartConfig={{
+                                        backgroundGradientFrom: "#f9fafb",
+                                        backgroundGradientTo: "#f9fafb",
+                                        decimalPlaces: 0,
+                                        color: (opacity = 1) =>
+                                            `rgba(0,0,0,${opacity})`,
+                                        labelColor: (opacity = 1) =>
+                                            `rgba(0,0,0,${opacity})`,
+                                    }}
+                                    bezier
+                                    style={styles.chart}
+                                />
+                            </View>
+
+
+                            {volumeByDate.length > 0 && (
+                                <View style={{ marginTop: 20 }}>
+                                    <Text style={styles.subtitle}>
+                                        Volumen total (kg × reps)
+                                    </Text>
+                                    <BarChart
+                                        data={{
+                                            labels: Object.keys(groupedByDate),
+                                            datasets: [{ data: volumeByDate }],
+                                        }}
+                                        width={Dimensions.get("window").width - 40}
+                                        height={220}
+                                        chartConfig={{
+                                            backgroundGradientFrom: "#f9fafb",
+                                            backgroundGradientTo: "#f9fafb",
+                                            decimalPlaces: 0,
+                                            color: (opacity = 1) =>
+                                                `rgba(34,197,94,${opacity})`,
+                                            labelColor: (opacity = 1) =>
+                                                `rgba(0,0,0,${opacity})`,
+                                        }}
+                                        style={styles.chart}
+                                    />
+                                </View>
+                            )}
+                        </>
+                    )}
+                </>
             )}
         </ScrollView>
     );
@@ -140,17 +204,9 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         textAlign: "center",
     },
-    filters: { marginBottom: 16 },
     picker: {
         backgroundColor: "#fff",
-        marginBottom: 8,
-    },
-    input: {
-        backgroundColor: "#fff",
-        padding: 8,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: "#ddd",
+        marginBottom: 12,
     },
     card: {
         backgroundColor: "#fff",

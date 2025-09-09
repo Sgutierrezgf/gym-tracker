@@ -39,7 +39,7 @@ const useFetchData = () => {
             const json = await response.json();
             if (json?.doc) {
                 setData((prev) => [...prev, json.doc]);
-                await getExerciseData(); // 🔥 fuerza actualización
+                await getExerciseData();
             }
             return json.doc;
         } catch (err) {
